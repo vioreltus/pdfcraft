@@ -49,6 +49,7 @@ pub const LANGUAGES: &[(&str, &str)] = &[
     ("fi", "Finnish"),
     ("cs", "Czech"),
     ("pl", "Polish"),
+    ("ro", "Romanian"),
 ];
 
 pub const CHINESE_MODEL: &str = "chinese-recognition.onnx";
@@ -74,11 +75,15 @@ const PP_OCR: &[(&str, &str, &str, usize)] = &[
     ("fi", LATIN_MODEL, LATIN_DICTIONARY, 504),
     ("cs", LATIN_MODEL, LATIN_DICTIONARY, 504),
     ("pl", LATIN_MODEL, LATIN_DICTIONARY, 504),
+    ("ro", LATIN_MODEL, LATIN_DICTIONARY, 504),
 ];
 
 /// The model files, as named in ATTRIBUTION.toml.
 pub const DETECTION_MODEL: &str = "text-detection.onnx";
 pub const RECOGNITION_MODEL: &str = "text-recognition.onnx";
+/// Romanian word forms that restore the diacritics the recognisers cannot write
+/// ([`crate::romanian`]), installed beside the models.
+pub const ROMANIAN_WORDS: &str = "ro-words.txt";
 /// Their SHA-256s, as in ATTRIBUTION.toml. [`Ocr::from_bytes`] loads nothing else: rten's ONNX
 /// parser can spin forever on bytes that aren't a model (64 × 0xff does).
 pub const DETECTION_MODEL_SHA256: &str = "a917b23dbd9524b465df7e922641b3ff2981623df4ded5a0234004ef2fee7cfe";
@@ -125,13 +130,19 @@ impl Models {
             return Self::search_dirs().iter().find_map(|d| Self::in_dir(d));
         }
         let (model, dictionary, _) = pp_ocr_spec(language)?;
-        Self::search_dirs().iter().find_map(|dir| {
+        let latin = Self::search_dirs().iter().find_map(|dir| {
             let detection = [DETECTION_MODEL, "text-detection.rten"].into_iter().map(|name| dir.join(name)).find(|path| path.is_file())?;
             if !dir.join(model).is_file() || dictionary_file(dir, dictionary).is_none() {
                 return None;
             }
             Some(Models { detection, recognition: dir.join(model) })
-        })
+        });
+        // Romanian reads with the English pair too: [`crate::romanian`] fills in the letters it
+        // can't write.
+        if latin.is_none() && language == "ro" {
+            return Self::find_for("en");
+        }
+        latin
     }
 
     /// The directories [`Models::find`] looks in, in order.
@@ -357,11 +368,23 @@ impl Recognizer for OcrsRecognizer {
     }
 
     fn recognize(&self, image: &OcrImage, options: &RecognizeOptions) -> Result<Vec<Line>, OcrError> {
-        let Some((model, dictionary, classes)) = pp_ocr_spec(&options.language) else {
-            return self.engine.recognize(image.rgba(), image.width(), image.height());
+        let language = options.language.as_str();
+        let reader = match pp_ocr_spec(language) {
+            None => None,
+            Some((model, dictionary, classes)) => match self.ppocr_for(model, dictionary, classes) {
+                Ok(reader) => Some(reader),
+                // Romanian falls back to the English models: the restoration below writes the
+                // letters they can't.
+                Err(OcrError::NoModels) if language == "ro" => None,
+                Err(e) => return Err(e),
+            },
         };
-        let reader = self.ppocr_for(model, dictionary, classes)?;
-        self.engine.recognize_reading(image.rgba(), image.width(), image.height(), Some(&reader), preferred_letters(&options.language))
+        let mut lines = match reader {
+            Some(reader) => self.engine.recognize_reading(image.rgba(), image.width(), image.height(), Some(&reader), preferred_letters(language))?,
+            None => self.engine.recognize(image.rgba(), image.width(), image.height())?,
+        };
+        crate::romanian::restore_lines(language, &mut lines);
+        Ok(lines)
     }
 }
 
@@ -402,6 +425,8 @@ pub fn preferred_letters(language: &str) -> &'static str {
         "is" => "áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ",
         "cs" => "áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ",
         "pl" => "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ",
+        // The Latin dictionary has no ă, ț or comma-below ș: [`crate::romanian`] restores those.
+        "ro" => "âîşÂÎŞ",
         _ => "",
     }
 }
@@ -413,11 +438,13 @@ pub fn models_installed(language: &str) -> bool {
         return Models::find().is_some();
     }
     let Some((model, dictionary, _)) = pp_ocr_spec(language) else { return false };
-    Models::search_dirs().iter().any(|dir| {
+    let latin = Models::search_dirs().iter().any(|dir| {
         dir.join(model).is_file()
             && dictionary_file(dir, dictionary).is_some()
             && (dir.join(DETECTION_MODEL).is_file() || dir.join("text-detection.rten").is_file())
-    })
+    });
+    // Romanian also reads with the English pair ([`Models::find_for`]).
+    latin || (language == "ro" && Models::find().is_some())
 }
 
 /// `latin-keys.txt` is the attributed name. A checkout that still has `latin-dict.txt` (the
