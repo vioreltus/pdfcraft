@@ -57,4 +57,5 @@ getrandom = "0.4"
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [dev-dependencies]
+ab_glyph = "0.2"
 pdfcraft-testkit = { workspace = true }
