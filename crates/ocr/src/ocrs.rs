@@ -43,6 +43,10 @@ fn sha256_hex(bytes: &[u8]) -> String {
     Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
 }
 
+/// Romanian word forms that restore the diacritics the recognisers cannot write
+/// ([`crate::romanian`]), installed beside the models.
+pub const ROMANIAN_WORDS: &str = "ro-words.txt";
+
 pub const ALPHABET: &str = " 0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~€ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /// Where the two model files are.
