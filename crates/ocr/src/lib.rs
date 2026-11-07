@@ -31,11 +31,7 @@ pub mod tesseract;
 
 pub use confidence::{ConfidenceBand, band_for, is_suspect, low_confidence};
 pub use merge::{MergeStrategy, StrategyOutcome, mean_confidence, recognize_with_strategy, rover_merge};
-pub use ocrs::{ALPHABET, DETECTION_MODEL, LANGUAGES, Models, Ocr, OcrsRecognizer, RECOGNITION_MODEL};
-
-/// Romanian word forms that restore the diacritics the recognisers cannot write ([`romanian`]),
-/// installed beside the models.
-pub const ROMANIAN_WORDS: &str = "ro-words.txt";
+pub use ocrs::{ALPHABET, DETECTION_MODEL, LANGUAGES, Models, Ocr, OcrsRecognizer, RECOGNITION_MODEL, ROMANIAN_WORDS};
 
 pub use pdfcraft_fonts::TextPlan;
 pub use pdfcraft_fonts::helvetica_width;

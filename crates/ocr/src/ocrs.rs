@@ -33,6 +33,9 @@ pub const LANGUAGES: &[(&str, &str)] = &[("en", "English"), ("ro", "Romanian")];
 /// The model files, as named in ATTRIBUTION.toml.
 pub const DETECTION_MODEL: &str = "text-detection.onnx";
 pub const RECOGNITION_MODEL: &str = "text-recognition.onnx";
+/// Romanian word forms that restore the diacritics the recognisers cannot write
+/// ([`crate::romanian`]), installed beside the models.
+pub const ROMANIAN_WORDS: &str = "ro-words.txt";
 
 pub const ALPHABET: &str = " 0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~€ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
