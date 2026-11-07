@@ -29,7 +29,8 @@ fn checked_len(width: u32, height: u32) -> Result<usize, OcrError> {
 }
 
 /// The languages the models read (ISO 639-1); all use the Latin alphabet without accents.
-pub const LANGUAGES: &[(&str, &str)] = &[("en", "English")];
+/// Romanian has its diacritics restored after recognition ([`crate::romanian`]).
+pub const LANGUAGES: &[(&str, &str)] = &[("en", "English"), ("ro", "Romanian")];
 
 /// The model files, as named in ATTRIBUTION.toml.
 pub const DETECTION_MODEL: &str = "text-detection.onnx";
@@ -245,8 +246,10 @@ impl Recognizer for OcrsRecognizer {
         LANGUAGES.iter().map(|(c, n)| ((*c).to_string(), (*n).to_string())).collect()
     }
 
-    fn recognize(&self, image: &OcrImage, _options: &RecognizeOptions) -> Result<Vec<Line>, OcrError> {
-        self.engine.recognize(image.rgba(), image.width(), image.height())
+    fn recognize(&self, image: &OcrImage, options: &RecognizeOptions) -> Result<Vec<Line>, OcrError> {
+        let mut lines = self.engine.recognize(image.rgba(), image.width(), image.height())?;
+        crate::romanian::restore_lines(&options.language, &mut lines);
+        Ok(lines)
     }
 }
 
