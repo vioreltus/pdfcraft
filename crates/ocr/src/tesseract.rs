@@ -42,6 +42,7 @@ pub const LANGUAGE_CODES: &[(&str, &str)] = &[
     ("ko", "kor"),
     ("ar", "ara"),
     ("nl", "nld"),
+    ("ro", "ron"),
 ];
 
 /// English names for [`LANGUAGE_CODES`] (dropdowns show code + name).
@@ -58,6 +59,7 @@ pub const LANGUAGE_NAMES: &[(&str, &str)] = &[
     ("ko", "Korean"),
     ("ar", "Arabic"),
     ("nl", "Dutch"),
+    ("ro", "Romanian"),
 ];
 
 /// Map a settings language code to a Tesseract one: trimmed, case-insensitive, allow-listed;
@@ -473,10 +475,11 @@ impl Recognizer for TesseractCli {
         }
         // Fixed argv, no shell: tesseract <png> stdout -l <lang> tsv.
         let tsv = self.run(&[&png_path.to_string_lossy(), "stdout", "-l", lang, "tsv"], self.timeout, self.max_output)?;
-        let (lines, truncated) = parse_tsv_bounded(&tsv);
+        let (mut lines, truncated) = parse_tsv_bounded(&tsv);
         if truncated {
             return Err(OcrError::Recognize(format!("the {MAX_WORDS}-word limit was exceeded; the incomplete reading was rejected")));
         }
+        crate::romanian::restore_lines(&options.language, &mut lines);
         Ok(lines)
     }
 }

@@ -16,7 +16,8 @@
 //!
 //! The ocrs models read the Latin alphabet (English and other languages written without
 //! accents); Tesseract (the `tesseract` module, off the web build) reads whatever its installed
-//! language packs cover.
+//! language packs cover. Romanian (`ro`) then has the diacritics the reading lacks restored
+//! from a list of Romanian word forms ([`romanian`]).
 
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
@@ -24,12 +25,17 @@ pub mod confidence;
 pub mod merge;
 mod ocrs;
 pub mod preprocess;
+pub mod romanian;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tesseract;
 
 pub use confidence::{ConfidenceBand, band_for, is_suspect, low_confidence};
 pub use merge::{MergeStrategy, StrategyOutcome, mean_confidence, recognize_with_strategy, rover_merge};
 pub use ocrs::{ALPHABET, DETECTION_MODEL, LANGUAGES, Models, Ocr, OcrsRecognizer, RECOGNITION_MODEL};
+
+/// Romanian word forms that restore the diacritics the recognisers cannot write ([`romanian`]),
+/// installed beside the models.
+pub const ROMANIAN_WORDS: &str = "ro-words.txt";
 
 pub use pdfcraft_fonts::TextPlan;
 pub use pdfcraft_fonts::helvetica_width;
