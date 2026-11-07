@@ -6222,6 +6222,37 @@ fn recognize_text_reads_the_euro_sign() {
 
 const SYNTHETIC_SCAN_DPI: f64 = 300.0;
 
+/// Romanian (`ro`): the ocrs models write no `ă â î ș ț`, so the reading of a page typed
+/// without them gets them back from the word list (`pdfcraft_ocr::romanian`).
+#[test]
+fn romanian_ocr_restores_diacritics() {
+    if !ocr::available() {
+        eprintln!("skipped: OCR models not installed");
+        return;
+    }
+    if !pdfcraft_ocr::Models::search_dirs().iter().any(|d| d.join(pdfcraft_ocr::ROMANIAN_WORDS).is_file()) {
+        eprintln!("skipped: {} not installed", pdfcraft_ocr::ROMANIAN_WORDS);
+        return;
+    }
+    let mut s = Session::new().with_clock(|| 1_700_000_000);
+    let text = s.create_from_text("t", "Stiinta si tehnica au facut pasi mari in Romania.").unwrap();
+    let id = s.open("text.pdf", None, text, None).unwrap();
+    let png = export::Exporter::new(s.get(id).unwrap()).png(0, SYNTHETIC_SCAN_DPI).unwrap();
+    let scan = s.create_from_images_with_resolution(&[("scan.png".into(), png)], ImageResolution::Dpi(SYNTHETIC_SCAN_DPI)).unwrap();
+    let read = |s: &mut Session, language: &str| {
+        let id = s.open("scan.pdf", None, scan.clone(), None).unwrap();
+        s.recognize_text(id, &[], ocr::OcrSettings { language: language.into(), ..Default::default() }).unwrap();
+        page_texts(s, id)[0].clone()
+    };
+    // English keeps the reading as the models wrote it; Romanian restores the letters.
+    let english = read(&mut s, "en");
+    assert!(english.contains("Stiinta") && english.contains("facut"), "{english:?}");
+    let romanian = read(&mut s, "ro");
+    for word in ["Știința", "făcut", "în"] {
+        assert!(romanian.contains(word), "missing {word:?} in {romanian:?}");
+    }
+}
+
 /// A scan of the OCR sentence at the source page's physical size, without a text layer.
 fn synthetic_ocr_scan(s: &mut Session) -> (DocId, [f32; 2]) {
     let text = s.create_from_text("t", "The quick brown fox jumps over the lazy dog.").unwrap();
