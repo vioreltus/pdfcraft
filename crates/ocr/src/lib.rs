@@ -33,11 +33,8 @@ pub use confidence::{ConfidenceBand, band_for, is_suspect, low_confidence};
 pub use merge::{MergeStrategy, StrategyOutcome, mean_confidence, recognize_with_strategy, rover_merge};
 pub use ocrs::{
     ALPHABET, DETECTION_MODEL, DETECTION_MODEL_SHA256, LANGUAGES, Models, Ocr, OcrsRecognizer, RECOGNITION_MODEL, RECOGNITION_MODEL_SHA256,
+    ROMANIAN_WORDS,
 };
-
-/// Romanian word forms that restore the diacritics the recognisers cannot write ([`romanian`]),
-/// installed beside the models.
-pub const ROMANIAN_WORDS: &str = "ro-words.txt";
 
 pub use pdfcraft_fonts::TextPlan;
 pub use pdfcraft_fonts::helvetica_width;
