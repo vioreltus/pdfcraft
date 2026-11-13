@@ -40,7 +40,7 @@ jobs:
         run: packaging/macos/package.sh --arch x86_64
       - name: Publish
         env:
-          VER: "0.21.0"
+          VER: "0.21.1"
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -l dist/release
